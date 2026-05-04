@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/admin/(.*)",
+      "destination": "/bake-delight-admin/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/bake-delight-store/$1"
+    }
+  ]
+}

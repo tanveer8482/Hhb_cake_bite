@@ -1,0 +1,14 @@
+{
+  "name": "hhb-baker-workspace",
+  "private": true,
+  "workspaces": [
+    "bake-delight-store",
+    "bake-delight-admin",
+    "shared"
+  ],
+  "scripts": {
+    "dev:store": "npm run dev -w bake-delight-store",
+    "dev:admin": "npm run dev -w bake-delight-admin",
+    "build:all": "npm run build -w bake-delight-store -w bake-delight-admin"
+  }
+}
