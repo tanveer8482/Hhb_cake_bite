@@ -108,6 +108,16 @@ export default function App() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Debugging info
+    const bucket = import.meta.env.VITE_FIREBASE_STORAGE_BUCKET;
+    console.log('Using Storage Bucket:', bucket);
+    console.log('Current User:', auth.currentUser?.uid);
+
+    if (!bucket) {
+      alert('Error: Storage Bucket is not configured in environment variables.');
+      return;
+    }
+
     setUploading(true);
     setUploadProgress(0);
     try {
@@ -115,6 +125,7 @@ export default function App() {
       let fileToUpload = file;
       if (file.type.startsWith('image/')) {
         try {
+          console.log('Compressing...');
           fileToUpload = await compressImage(file);
         } catch (err) {
           console.error('Compression failed:', err);
@@ -128,20 +139,22 @@ export default function App() {
         (snapshot) => {
           const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
           setUploadProgress(Math.round(progress));
+          console.log('Upload Progress:', progress);
         }, 
         (error) => {
-          console.error('Upload error:', error);
-          alert('Upload failed: ' + error.message);
+          console.error('Firebase Storage Error:', error);
+          alert(`Upload failed: ${error.message}\nCode: ${error.code}\nBucket: ${bucket}`);
           setUploading(false);
         }, 
         async () => {
           const url = await getDownloadURL(uploadTask.snapshot.ref);
           setFormData({ ...formData, imageUrl: url });
           setUploading(false);
+          console.log('Upload Complete:', url);
         }
       );
     } catch (error) {
-      console.error('General error:', error);
+      console.error('General upload error:', error);
       alert('Error: ' + (error as any).message);
       setUploading(false);
     }
