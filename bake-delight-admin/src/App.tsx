@@ -25,7 +25,7 @@ import {
   query,
   orderBy
 } from 'firebase/firestore';
-import { ref, uploadBytes, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import { db, storage, auth } from '@hhb/shared';
 import type { Product } from '@hhb/shared';
