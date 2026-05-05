@@ -25,7 +25,7 @@ import {
   query,
   orderBy
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import { db, storage, auth } from '@hhb/shared';
 import type { Product } from '@hhb/shared';
@@ -44,6 +44,7 @@ export default function App() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   
   // Form State
   const [formData, setFormData] = useState({
@@ -108,32 +109,40 @@ export default function App() {
     if (!file) return;
 
     setUploading(true);
+    setUploadProgress(0);
     try {
-      console.log('Starting compression for:', file.name, file.size);
-      
       // Compress image if it's a photo
       let fileToUpload = file;
       if (file.type.startsWith('image/')) {
         try {
           fileToUpload = await compressImage(file);
-          console.log('Compressed size:', fileToUpload.size);
         } catch (err) {
-          console.error('Compression failed, using original:', err);
+          console.error('Compression failed:', err);
         }
       }
 
       const storageRef = ref(storage, `products/${Date.now()}_${fileToUpload.name}`);
-      console.log('Uploading to Firebase...');
-      
-      const uploadTask = await uploadBytes(storageRef, fileToUpload);
-      const url = await getDownloadURL(uploadTask.ref);
-      
-      console.log('Upload successful:', url);
-      setFormData({ ...formData, imageUrl: url });
+      const uploadTask = uploadBytesResumable(storageRef, fileToUpload);
+
+      uploadTask.on('state_changed', 
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setUploadProgress(Math.round(progress));
+        }, 
+        (error) => {
+          console.error('Upload error:', error);
+          alert('Upload failed: ' + error.message);
+          setUploading(false);
+        }, 
+        async () => {
+          const url = await getDownloadURL(uploadTask.snapshot.ref);
+          setFormData({ ...formData, imageUrl: url });
+          setUploading(false);
+        }
+      );
     } catch (error) {
-      console.error('Upload error details:', error);
-      alert('Upload failed: ' + (error as any).message + '\n\nCheck your internet connection or Firebase Storage rules.');
-    } finally {
+      console.error('General error:', error);
+      alert('Error: ' + (error as any).message);
       setUploading(false);
     }
   };
@@ -535,7 +544,7 @@ export default function App() {
                           className="inline-flex items-center gap-2 px-4 py-2 border rounded-lg cursor-pointer hover:bg-slate-50 transition-colors"
                         >
                           <Upload className="w-4 h-4" /> 
-                          {uploading ? 'Uploading...' : 'Choose File'}
+                          {uploading ? `Uploading ${uploadProgress}%` : 'Choose File'}
                         </label>
                         <p className="text-xs text-slate-400 mt-2">Recommended: Square image, max 2MB</p>
                       </div>
