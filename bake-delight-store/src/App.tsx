@@ -5,13 +5,13 @@ import {
   Calendar, 
   Clock, 
   MessageCircle, 
-  ChevronRight,
   X,
   Plus,
   Minus
 } from 'lucide-react';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
-import { db, Product, CartItem, CheckoutForm } from '@hhb/shared';
+import { db } from '@hhb/shared';
+import type { Product, CartItem, CheckoutForm } from '@hhb/shared';
 
 const CATEGORIES = ['All', 'Cake', 'Cookie', 'Pastry', 'Cupcake'];
 
@@ -21,6 +21,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [checkoutForm, setCheckoutForm] = useState<CheckoutForm>({
     customerName: '',
     customerPhone: '',
@@ -37,8 +38,8 @@ export default function App() {
       orderBy('createdAt', 'desc')
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const prods = snapshot.docs.map(doc => ({
+    const unsubscribe = onSnapshot(q, (snapshot: any) => {
+      const prods = snapshot.docs.map((doc: any) => ({
         id: doc.id,
         ...doc.data()
       })) as Product[];
@@ -115,6 +116,92 @@ export default function App() {
 
     const encodedMessage = encodeURIComponent(message);
     window.open(`https://wa.me/923001234567?text=${encodedMessage}`, '_blank');
+  };
+
+  const sendWhatsAppNotification = async () => {
+    const { customerName, deliveryDate, deliveryTime, address } = checkoutForm;
+    
+    // Construct Order Summary for Body
+    let summary = `*New Order from HHB Cake Bites*\n`;
+    summary += `--------------------------\n`;
+    summary += `*Customer:* ${customerName}\n`;
+    summary += `*Delivery:* ${deliveryDate} at ${deliveryTime}\n`;
+    summary += `*Address:* ${address || 'Self Pickup'}\n\n`;
+    summary += `*Items:*\n`;
+    
+    cart.forEach((item, index) => {
+      summary += `${index + 1}. ${item.product.name} (x${item.quantity}) - Rs. ${item.product.price * item.quantity}\n`;
+    });
+    
+    summary += `\n*Total: Rs. ${totalPrice}*`;
+
+    const firstItemImage = cart[0]?.product.imageUrl || '';
+    
+    const accessToken = import.meta.env.VITE_WHATSAPP_ACCESS_TOKEN;
+    const phoneNumberId = import.meta.env.VITE_WHATSAPP_PHONE_NUMBER_ID;
+    const recipientNumber = import.meta.env.VITE_WHATSAPP_RECIPIENT_NUMBER;
+
+    if (!accessToken || !phoneNumberId || !recipientNumber) {
+      console.error('WhatsApp credentials missing');
+      return false;
+    }
+
+    try {
+      const response = await fetch(`https://graph.facebook.com/v20.0/${phoneNumberId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: recipientNumber,
+          type: "image",
+          image: {
+            link: firstItemImage,
+            caption: summary
+          }
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        console.log('WhatsApp notification sent:', data);
+        return true;
+      } else {
+        console.error('WhatsApp API error:', data);
+        return false;
+      }
+    } catch (error) {
+      console.error('Failed to send WhatsApp notification:', error);
+      return false;
+    }
+  };
+
+  const handleCheckout = async () => {
+    const { customerName, deliveryDate, deliveryTime } = checkoutForm;
+    if (!customerName || !deliveryDate || !deliveryTime) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    setIsCheckingOut(true);
+    
+    // 1. Try Automated Notification
+    const success = await sendWhatsAppNotification();
+    
+    if (success) {
+      alert('Order Confirmed! You will receive a WhatsApp notification shortly.');
+      setCart([]);
+      setIsCartOpen(false);
+    } else {
+      // 2. Fallback to manual WhatsApp link if automated fails
+      alert('Automated notification failed. Opening manual WhatsApp link...');
+      generateWhatsAppLink();
+    }
+    
+    setIsCheckingOut(false);
   };
 
   // Scheduling Logic
@@ -370,10 +457,17 @@ export default function App() {
                   <span className="text-2xl font-bold text-gray-900">Rs. {totalPrice}</span>
                 </div>
                 <button 
-                  onClick={generateWhatsAppLink}
-                  className="w-full py-4 bg-green-600 text-white font-bold rounded-2xl hover:bg-green-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-100"
+                  onClick={handleCheckout}
+                  disabled={isCheckingOut}
+                  className="w-full py-4 bg-green-600 text-white font-bold rounded-2xl hover:bg-green-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-100 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <MessageCircle className="w-5 h-5" /> Checkout on WhatsApp
+                  {isCheckingOut ? (
+                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <MessageCircle className="w-5 h-5" /> Confirm & Order via WhatsApp
+                    </>
+                  )}
                 </button>
               </div>
             )}

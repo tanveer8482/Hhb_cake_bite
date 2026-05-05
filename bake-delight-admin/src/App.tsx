@@ -27,7 +27,8 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
-import { db, storage, auth, Product } from '@hhb/shared';
+import { db, storage, auth } from '@hhb/shared';
+import type { Product } from '@hhb/shared';
 
 export default function App() {
   const [user, setUser] = useState<any>(null);
@@ -63,8 +64,8 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
     const q = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const prods = snapshot.docs.map(doc => ({
+    const unsubscribe = onSnapshot(q, (snapshot: any) => {
+      const prods = snapshot.docs.map((doc: any) => ({
         id: doc.id,
         ...doc.data()
       })) as Product[];
@@ -158,6 +159,8 @@ export default function App() {
         description: product.description,
         price: product.price,
         category: product.category,
+        size: product.size || '',
+        flavor: product.flavor || '',
         imageUrl: product.imageUrl,
         status: product.status
       });
@@ -168,6 +171,8 @@ export default function App() {
         description: '',
         price: 0,
         category: 'Cake',
+        size: '',
+        flavor: '',
         imageUrl: '',
         status: true
       });
