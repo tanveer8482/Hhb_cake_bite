@@ -29,6 +29,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import { db, storage, auth } from '@hhb/shared';
 import type { Product } from '@hhb/shared';
+import { compressImage } from './utils/imageCompression';
 
 export default function App() {
   const [user, setUser] = useState<any>(null);
@@ -108,8 +109,14 @@ export default function App() {
 
     setUploading(true);
     try {
-      const storageRef = ref(storage, `products/${Date.now()}_${file.name}`);
-      await uploadBytes(storageRef, file);
+      // Compress image if it's a photo
+      let fileToUpload = file;
+      if (file.type.startsWith('image/')) {
+        fileToUpload = await compressImage(file);
+      }
+
+      const storageRef = ref(storage, `products/${Date.now()}_${fileToUpload.name}`);
+      await uploadBytes(storageRef, fileToUpload);
       const url = await getDownloadURL(storageRef);
       setFormData({ ...formData, imageUrl: url });
     } catch (error) {
