@@ -42,6 +42,7 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
   
   // Form State
   const [formData, setFormData] = useState({
@@ -112,7 +113,8 @@ export default function App() {
       const url = await getDownloadURL(storageRef);
       setFormData({ ...formData, imageUrl: url });
     } catch (error) {
-      alert('Upload failed');
+      console.error('Upload error:', error);
+      alert('Upload failed: ' + (error as any).message);
     } finally {
       setUploading(false);
     }
@@ -121,7 +123,9 @@ export default function App() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.imageUrl) return alert('Please upload an image');
+    if (uploading) return alert('Please wait for the image to finish uploading');
 
+    setSaving(true);
     try {
       if (editingProduct) {
         await updateDoc(doc(db, 'products', editingProduct.id), {
@@ -137,7 +141,10 @@ export default function App() {
       }
       closeModal();
     } catch (error) {
-      alert('Operation failed');
+      console.error('Submit error:', error);
+      alert('Operation failed: ' + (error as any).message);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -396,8 +403,8 @@ export default function App() {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={closeModal} />
-          <div className="relative bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="p-6 border-b flex justify-between items-center">
+          <div className="relative bg-white w-full max-w-2xl max-h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b flex justify-between items-center bg-white">
               <h3 className="text-xl font-bold text-slate-900">
                 {editingProduct ? 'Edit Product' : 'Add New Product'}
               </h3>
@@ -406,131 +413,134 @@ export default function App() {
               </button>
             </div>
             
-            <form onSubmit={handleSubmit} className="p-8 space-y-6">
-              <div className="grid grid-cols-2 gap-6">
-                <div className="col-span-2 sm:col-span-1 space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Product Name</label>
-                  <input 
-                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-slate-900"
-                    value={formData.name}
-                    onChange={e => setFormData({...formData, name: e.target.value})}
-                    required
-                  />
-                </div>
-                <div className="col-span-2 sm:col-span-1 space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Category</label>
-                  <select 
-                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-slate-900"
-                    value={formData.category}
-                    onChange={e => setFormData({...formData, category: e.target.value})}
-                  >
-                    <option>Cake</option>
-                    <option>Cookie</option>
-                    <option>Pastry</option>
-                    <option>Cupcake</option>
-                  </select>
-                </div>
-                <div className="col-span-2 sm:col-span-1 space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Size / Weight</label>
-                  <input 
-                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-slate-900"
-                    placeholder="e.g. 2lbs, 8 inches"
-                    value={formData.size}
-                    onChange={e => setFormData({...formData, size: e.target.value})}
-                  />
-                </div>
-                <div className="col-span-2 sm:col-span-1 space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Flavor</label>
-                  <input 
-                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-slate-900"
-                    placeholder="e.g. Chocolate Fudge"
-                    value={formData.flavor}
-                    onChange={e => setFormData({...formData, flavor: e.target.value})}
-                  />
-                </div>
-                <div className="col-span-2 sm:col-span-1 space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Price (Rs.)</label>
-                  <input 
-                    type="number"
-                    className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-slate-900"
-                    value={formData.price}
-                    onChange={e => setFormData({...formData, price: Number(e.target.value)})}
-                    required
-                  />
-                </div>
-                <div className="col-span-2 sm:col-span-1 space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Initial Status</label>
-                  <div className="flex gap-4 p-3 bg-slate-50 rounded-xl">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="radio" 
-                        checked={formData.status} 
-                        onChange={() => setFormData({...formData, status: true})}
-                      /> Live
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="radio" 
-                        checked={!formData.status} 
-                        onChange={() => setFormData({...formData, status: false})}
-                      /> Hidden
-                    </label>
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+              <div className="p-8 space-y-6 overflow-y-auto flex-1">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="col-span-2 sm:col-span-1 space-y-2">
+                    <label className="text-sm font-bold text-slate-700">Product Name</label>
+                    <input 
+                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-slate-900"
+                      value={formData.name}
+                      onChange={e => setFormData({...formData, name: e.target.value})}
+                      required
+                    />
                   </div>
-                </div>
-                <div className="col-span-2 space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Description</label>
-                  <textarea 
-                    className="w-full p-3 border rounded-xl h-24 resize-none outline-none focus:ring-2 focus:ring-slate-900"
-                    value={formData.description}
-                    onChange={e => setFormData({...formData, description: e.target.value})}
-                    required
-                  />
-                </div>
-                <div className="col-span-2 space-y-2">
-                  <label className="text-sm font-bold text-slate-700">Product Image</label>
-                  <div className="flex items-center gap-6">
-                    <div className="w-24 h-24 bg-slate-100 rounded-2xl border-2 border-dashed flex items-center justify-center overflow-hidden">
-                      {formData.imageUrl ? (
-                        <img src={formData.imageUrl} className="w-full h-full object-cover" />
-                      ) : (
-                        <Upload className="w-6 h-6 text-slate-300" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        onChange={handleImageUpload}
-                        className="hidden" 
-                        id="image-upload" 
-                      />
-                      <label 
-                        htmlFor="image-upload"
-                        className="inline-flex items-center gap-2 px-4 py-2 border rounded-lg cursor-pointer hover:bg-slate-50 transition-colors"
-                      >
-                        <Upload className="w-4 h-4" /> 
-                        {uploading ? 'Uploading...' : 'Choose File'}
+                  <div className="col-span-2 sm:col-span-1 space-y-2">
+                    <label className="text-sm font-bold text-slate-700">Category</label>
+                    <select 
+                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-slate-900"
+                      value={formData.category}
+                      onChange={e => setFormData({...formData, category: e.target.value})}
+                    >
+                      <option>Cake</option>
+                      <option>Cookie</option>
+                      <option>Pastry</option>
+                      <option>Cupcake</option>
+                    </select>
+                  </div>
+                  <div className="col-span-2 sm:col-span-1 space-y-2">
+                    <label className="text-sm font-bold text-slate-700">Size / Weight</label>
+                    <input 
+                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-slate-900"
+                      placeholder="e.g. 2lbs, 8 inches"
+                      value={formData.size}
+                      onChange={e => setFormData({...formData, size: e.target.value})}
+                    />
+                  </div>
+                  <div className="col-span-2 sm:col-span-1 space-y-2">
+                    <label className="text-sm font-bold text-slate-700">Flavor</label>
+                    <input 
+                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-slate-900"
+                      placeholder="e.g. Chocolate Fudge"
+                      value={formData.flavor}
+                      onChange={e => setFormData({...formData, flavor: e.target.value})}
+                    />
+                  </div>
+                  <div className="col-span-2 sm:col-span-1 space-y-2">
+                    <label className="text-sm font-bold text-slate-700">Price (Rs.)</label>
+                    <input 
+                      type="number"
+                      className="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-slate-900"
+                      value={formData.price}
+                      onChange={e => setFormData({...formData, price: Number(e.target.value)})}
+                      required
+                    />
+                  </div>
+                  <div className="col-span-2 sm:col-span-1 space-y-2">
+                    <label className="text-sm font-bold text-slate-700">Initial Status</label>
+                    <div className="flex gap-4 p-3 bg-slate-50 rounded-xl">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input 
+                          type="radio" 
+                          checked={formData.status} 
+                          onChange={() => setFormData({...formData, status: true})}
+                        /> Live
                       </label>
-                      <p className="text-xs text-slate-400 mt-2">Recommended: Square image, max 2MB</p>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input 
+                          type="radio" 
+                          checked={!formData.status} 
+                          onChange={() => setFormData({...formData, status: false})}
+                        /> Hidden
+                      </label>
+                    </div>
+                  </div>
+                  <div className="col-span-2 space-y-2">
+                    <label className="text-sm font-bold text-slate-700">Description</label>
+                    <textarea 
+                      className="w-full p-3 border rounded-xl h-24 resize-none outline-none focus:ring-2 focus:ring-slate-900"
+                      value={formData.description}
+                      onChange={e => setFormData({...formData, description: e.target.value})}
+                      required
+                    />
+                  </div>
+                  <div className="col-span-2 space-y-2">
+                    <label className="text-sm font-bold text-slate-700">Product Image</label>
+                    <div className="flex items-center gap-6">
+                      <div className="w-24 h-24 bg-slate-100 rounded-2xl border-2 border-dashed flex items-center justify-center overflow-hidden">
+                        {formData.imageUrl ? (
+                          <img src={formData.imageUrl} className="w-full h-full object-cover" />
+                        ) : (
+                          <Upload className="w-6 h-6 text-slate-300" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={handleImageUpload}
+                          className="hidden" 
+                          id="image-upload" 
+                        />
+                        <label 
+                          htmlFor="image-upload"
+                          className="inline-flex items-center gap-2 px-4 py-2 border rounded-lg cursor-pointer hover:bg-slate-50 transition-colors"
+                        >
+                          <Upload className="w-4 h-4" /> 
+                          {uploading ? 'Uploading...' : 'Choose File'}
+                        </label>
+                        <p className="text-xs text-slate-400 mt-2">Recommended: Square image, max 2MB</p>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
               
-              <div className="flex gap-4 pt-4">
+              <div className="p-8 border-t bg-slate-50 flex gap-4">
                 <button 
                   type="button" 
                   onClick={closeModal}
-                  className="flex-1 py-3 border rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition-all"
+                  className="flex-1 py-3 border bg-white rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition-all"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
-                  disabled={uploading}
-                  className="flex-[2] py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 disabled:opacity-50"
+                  disabled={uploading || saving}
+                  className="flex-[2] py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {editingProduct ? 'Update Product' : 'Create Product'}
+                  {saving && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                  {saving ? 'Saving...' : (editingProduct ? 'Update Product' : 'Create Product')}
                 </button>
               </div>
             </form>
