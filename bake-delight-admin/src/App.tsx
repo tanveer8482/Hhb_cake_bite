@@ -109,19 +109,30 @@ export default function App() {
 
     setUploading(true);
     try {
+      console.log('Starting compression for:', file.name, file.size);
+      
       // Compress image if it's a photo
       let fileToUpload = file;
       if (file.type.startsWith('image/')) {
-        fileToUpload = await compressImage(file);
+        try {
+          fileToUpload = await compressImage(file);
+          console.log('Compressed size:', fileToUpload.size);
+        } catch (err) {
+          console.error('Compression failed, using original:', err);
+        }
       }
 
       const storageRef = ref(storage, `products/${Date.now()}_${fileToUpload.name}`);
-      await uploadBytes(storageRef, fileToUpload);
-      const url = await getDownloadURL(storageRef);
+      console.log('Uploading to Firebase...');
+      
+      const uploadTask = await uploadBytes(storageRef, fileToUpload);
+      const url = await getDownloadURL(uploadTask.ref);
+      
+      console.log('Upload successful:', url);
       setFormData({ ...formData, imageUrl: url });
     } catch (error) {
-      console.error('Upload error:', error);
-      alert('Upload failed: ' + (error as any).message);
+      console.error('Upload error details:', error);
+      alert('Upload failed: ' + (error as any).message + '\n\nCheck your internet connection or Firebase Storage rules.');
     } finally {
       setUploading(false);
     }

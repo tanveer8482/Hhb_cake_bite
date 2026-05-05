@@ -1,58 +1,24 @@
+import imageCompression from 'browser-image-compression';
+
 export const compressImage = async (file: File): Promise<File> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target.result as string;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
+  const options = {
+    maxSizeMB: 1,            // Target max size 1MB
+    maxWidthOrHeight: 1600, // HD resolution but optimized
+    useWebWorker: true,     // Improved performance
+    fileType: 'image/jpeg', // Better compression for photos
+    initialQuality: 0.85,    // Good starting quality
+  };
 
-        // Max dimensions for HD but optimized
-        const MAX_DIMENSION = 1600; 
-        
-        if (width > height) {
-          if (width > MAX_DIMENSION) {
-            height *= MAX_DIMENSION / width;
-            width = MAX_DIMENSION;
-          }
-        } else {
-          if (height > MAX_DIMENSION) {
-            width *= MAX_DIMENSION / height;
-            height = MAX_DIMENSION;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return reject(new Error('Canvas context failed'));
-
-        // Draw image on canvas
-        ctx.drawImage(img, 0, 0, width, height);
-
-        // Convert to Blob with quality optimization
-        // image/jpeg is much smaller than png for photos
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
-                type: 'image/jpeg',
-                lastModified: Date.now(),
-              });
-              resolve(compressedFile);
-            } else {
-              reject(new Error('Canvas toBlob failed'));
-            }
-          },
-          'image/jpeg',
-          0.85 // 85% quality - sweet spot for clarity vs size
-        );
-      };
-      img.onerror = (err) => reject(err);
-    };
-    reader.onerror = (err) => reject(err);
-  });
+  try {
+    const compressedBlob = await imageCompression(file, options);
+    // Convert blob back to file with proper extension
+    return new File([compressedBlob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+      type: 'image/jpeg',
+      lastModified: Date.now(),
+    });
+  } catch (error) {
+    console.error('Compression error:', error);
+    // If compression fails, return original file as fallback
+    return file;
+  }
 };
