@@ -9,7 +9,7 @@ import {
   Plus,
   Minus
 } from 'lucide-react';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '@hhb/shared';
 import type { Product, CartItem, CheckoutForm } from '@hhb/shared';
 
@@ -17,6 +17,7 @@ const CATEGORIES = ['All', 'Cake', 'Cookie', 'Pastry', 'Cupcake'];
 
 export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [productsError, setProductsError] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -34,8 +35,7 @@ export default function App() {
   useEffect(() => {
     const q = query(
       collection(db, 'products'),
-      where('status', '==', true),
-      orderBy('createdAt', 'desc')
+      where('status', '==', true)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot: any) => {
@@ -43,7 +43,16 @@ export default function App() {
         id: doc.id,
         ...doc.data()
       })) as Product[];
+      prods.sort((a, b) => {
+        const dateA = a.createdAt?.toMillis?.() ?? 0;
+        const dateB = b.createdAt?.toMillis?.() ?? 0;
+        return dateB - dateA;
+      });
+      setProductsError('');
       setProducts(prods);
+    }, (error) => {
+      console.error('Failed to load products:', error);
+      setProductsError('Products load nahi ho sake. Firebase permissions ya deployment config check karein.');
     });
 
     return () => unsubscribe();
@@ -312,6 +321,11 @@ export default function App() {
 
         {/* Product Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {productsError && (
+            <div className="col-span-full rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+              {productsError}
+            </div>
+          )}
           {filteredProducts.map(product => (
             <div key={product.id} className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group border border-gray-100">
               <div className="relative h-64 overflow-hidden">
