@@ -1,5 +1,6 @@
 const sanitizePakistanWhatsAppNumber = (phoneNumber = '') => {
-  const digitsWithoutLeadingZero = String(phoneNumber).replace(/\D/g, '').replace(/^0+/, '');
+  const onlyDigits = String(phoneNumber).replace(/\D/g, '');
+  const digitsWithoutLeadingZero = onlyDigits.replace(/^0+/, '');
   return digitsWithoutLeadingZero.startsWith('92')
     ? digitsWithoutLeadingZero
     : `92${digitsWithoutLeadingZero}`;
