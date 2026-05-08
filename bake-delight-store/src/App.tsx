@@ -21,10 +21,20 @@ const BAKERY_WHATSAPP_NUMBER = '923008156061'; // Bakery WhatsApp number in 923x
 const formatPrice = (price: number) => `Rs. ${price.toLocaleString('en-PK')}`;
 
 const sanitizePakistanWhatsAppNumber = (phoneNumber: string) => {
-  const digitsWithoutLeadingZero = phoneNumber.replace(/\D/g, '').replace(/^0+/, '');
-  return digitsWithoutLeadingZero.startsWith('92')
-    ? digitsWithoutLeadingZero
-    : `92${digitsWithoutLeadingZero}`;
+  const digits = phoneNumber.replace(/\D/g, '');
+  if (/^03\d{9}$/.test(digits)) {
+    return `92${digits.slice(1)}`;
+  }
+  if (/^0\d{10}$/.test(digits)) {
+    return `92${digits.slice(1)}`;
+  }
+  if (/^92\d{10}$/.test(digits)) {
+    return digits;
+  }
+  if (/^923\d{9}$/.test(digits)) {
+    return digits;
+  }
+  return digits;
 };
 
 export default function App() {
@@ -147,8 +157,8 @@ export default function App() {
     const cleanedCustomerPhone = String(checkoutForm.customerPhone).replace(/\D/g, '');
     const sanitizedCustomerPhone = sanitizePakistanWhatsAppNumber(cleanedCustomerPhone);
 
-    if (!/^92\d{9}$/.test(sanitizedCustomerPhone)) {
-      alert('Please enter a valid Pakistani WhatsApp number in the 923xxxxxxxxx format');
+    if (!/^923\d{9}$/.test(sanitizedCustomerPhone)) {
+      alert('Please enter your Pakistani WhatsApp number like 03XXXXXXXXX or +92XXXXXXXXXX. It will be normalized to 923XXXXXXXXXX automatically.');
       return false;
     }
 

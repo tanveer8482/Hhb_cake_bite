@@ -1,9 +1,18 @@
 const sanitizePakistanWhatsAppNumber = (phoneNumber = '') => {
-  const onlyDigits = String(phoneNumber).replace(/\D/g, '');
-  const digitsWithoutLeadingZero = onlyDigits.replace(/^0+/, '');
-  return digitsWithoutLeadingZero.startsWith('92')
-    ? digitsWithoutLeadingZero
-    : `92${digitsWithoutLeadingZero}`;
+  const digits = String(phoneNumber).replace(/\D/g, '');
+  if (/^03\d{9}$/.test(digits)) {
+    return `92${digits.slice(1)}`;
+  }
+  if (/^0\d{10}$/.test(digits)) {
+    return `92${digits.slice(1)}`;
+  }
+  if (/^92\d{10}$/.test(digits)) {
+    return digits;
+  }
+  if (/^923\d{9}$/.test(digits)) {
+    return digits;
+  }
+  return digits;
 };
 
 module.exports = async function handler(req, res) {
