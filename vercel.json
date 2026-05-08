@@ -1,17 +1,5 @@
 {
-  "version": 2,
   "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
-    },
-    {
-      "source": "/admin/(.*)",
-      "destination": "/bake-delight-admin/$1"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/bake-delight-store/$1"
-    }
+    { "source": "/api/(.*)", "destination": "/api/$1" }
   ]
 }
