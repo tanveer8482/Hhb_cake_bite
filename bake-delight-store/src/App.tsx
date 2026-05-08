@@ -290,18 +290,126 @@ export default function App() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Hero Section */}
-        <div className="mb-12 text-center">
-          <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">
-            Deliciously Handcrafted <br />
-            <span className="text-pink-600">Just for You</span>
-          </h2>
-          <p className="text-gray-600 max-w-2xl mx-auto">
-            Experience the finest cakes, cookies, and pastries made with love and the freshest ingredients.
-          </p>
+      <main className="max-w-7xl mx-auto px-0 py-0">
+        {/* Premium Marquee Banner */}
+        <div className="relative mb-12 w-full overflow-hidden bg-gradient-to-r from-gold-400 via-cream-100 to-gold-300 py-4 shadow-lg">
+          <style>{`
+            @keyframes marqueeScroll {
+              0% { transform: translateX(0); }
+              100% { transform: translateX(-100%); }
+            }
+            .marquee-content {
+              animation: marqueeScroll 35s linear infinite;
+              white-space: nowrap;
+              display: flex;
+              gap: 2rem;
+            }
+            .marquee-content:hover {
+              animation-play-state: paused;
+            }
+            .marquee-glow {
+              text-shadow: 0 0 8px rgba(212, 175, 55, 0.6), 
+                           0 0 16px rgba(212, 175, 55, 0.4),
+                           0 0 2px rgba(62, 39, 35, 0.3);
+            }
+          `}</style>
+          <div className="flex overflow-hidden">
+            <div className="marquee-content marquee-glow text-brown-900 font-serif text-lg md:text-xl font-semibold">
+              <span>• Chocolate Fudge - RS 2,500</span>
+              <span>• Strawberry Dream - RS 2,800</span>
+              <span>• Royal Velvet - RS 3,100</span>
+              <span>• Caramel Bliss - RS 2,700</span>
+              <span>• Vanilla Paradise - RS 2,300</span>
+              <span>• Pistachio Elegance - RS 3,200</span>
+              <span>• Chocolate Fudge - RS 2,500</span>
+              <span>• Strawberry Dream - RS 2,800</span>
+              <span>• Royal Velvet - RS 3,100</span>
+              <span>• Caramel Bliss - RS 2,700</span>
+            </div>
+          </div>
         </div>
 
+        {/* Premium Hero Section */}
+        <div className="relative mx-4 mb-16 overflow-hidden rounded-3xl bg-gradient-to-br from-cream-100 via-pink-50 to-white shadow-2xl">
+          {/* Decorative Background Elements */}
+          <div className="absolute inset-0 opacity-20 pointer-events-none">
+            <div className="absolute top-10 right-20 w-96 h-96 bg-gold-300 rounded-full blur-3xl opacity-30"></div>
+            <div className="absolute -bottom-20 left-20 w-72 h-72 bg-pink-200 rounded-full blur-3xl opacity-20"></div>
+          </div>
+
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 px-6 md:px-12 py-12 md:py-16 items-center">
+            {/* Left Column: Typography */}
+            <div className="flex flex-col justify-center space-y-6">
+              <div>
+                <h1 className="font-script text-6xl md:text-7xl text-brown-900 mb-3 leading-tight" style={{ fontStyle: 'italic' }}>
+                  Bake Delight
+                </h1>
+                <div className="w-16 h-1 bg-gradient-to-r from-gold-400 to-gold-500 rounded-full"></div>
+              </div>
+
+              <p className="font-serif text-2xl md:text-3xl text-brown-800 leading-relaxed">
+                We Bake Your Dreams Into Delicious Reality
+              </p>
+
+              <p className="text-gray-700 text-base md:text-lg leading-relaxed max-w-md">
+                Handcrafted cakes, pastries, and cookies made with love, the finest ingredients, and an obsession for perfection. Every bite tells a story of passion and artistry.
+              </p>
+
+              <button
+                onClick={() => {
+                  const productsSection = document.querySelector('[data-products-section]');
+                  if (productsSection) {
+                    productsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }}
+                className="w-fit px-8 py-4 bg-gradient-to-r from-gold-400 to-gold-500 text-brown-900 font-bold text-lg rounded-xl shadow-lg shadow-gold-300/50 hover:shadow-xl hover:shadow-gold-400 transition-all duration-300 hover:scale-105 active:scale-95"
+              >
+                SHOP CAKES
+              </button>
+            </div>
+
+            {/* Right Column: Cake Cluster */}
+            <div className="relative h-80 md:h-96 lg:h-[450px] flex items-center justify-center">
+              {/* Blur background circle */}
+              <div className="absolute inset-0 bg-gradient-to-br from-pink-100/60 to-pink-50/40 rounded-3xl blur-2xl opacity-50"></div>
+
+              {/* Three Cake Images */}
+              <div className="relative w-full h-full flex items-center justify-center group perspective">
+                {/* Center Cake - Large - using dynamic product or placeholder */}
+                <div className="absolute z-20 w-40 md:w-48 h-52 md:h-64 rounded-2xl overflow-hidden shadow-2xl transform group-hover:scale-110 group-hover:translate-y-2 transition-all duration-500 border-4 border-white/80 hover:border-gold-400/50">
+                  <img
+                    src={products[0]?.imageUrl || 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=500&h=650&fit=crop&q=80'}
+                    alt="Premium Chocolate Cake"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                </div>
+
+                {/* Left Cake - Smaller, rotated */}
+                <div className="absolute z-10 -left-6 md:-left-10 w-28 md:w-36 h-36 md:h-44 rounded-2xl overflow-hidden shadow-xl transform -rotate-12 group-hover:-rotate-6 group-hover:scale-110 group-hover:-translate-y-1 transition-all duration-500 border-4 border-white/60 hover:border-gold-300/50">
+                  <img
+                    src={products[1]?.imageUrl || 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&h=500&fit=crop&q=80'}
+                    alt="Strawberry Dream Cake"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                </div>
+
+                {/* Right Cake - Smaller, rotated */}
+                <div className="absolute z-10 -right-6 md:-right-10 w-28 md:w-36 h-36 md:h-44 rounded-2xl overflow-hidden shadow-xl transform rotate-12 group-hover:rotate-6 group-hover:scale-110 group-hover:-translate-y-1 transition-all duration-500 border-4 border-white/60 hover:border-gold-300/50">
+                  <img
+                    src={products[2]?.imageUrl || 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&h=500&fit=crop&q=80'}
+                    alt="Royal Velvet Cake"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4" data-products-section>
         {/* Search & Filter */}
         <div className="flex flex-col md:flex-row gap-4 mb-8">
           <div className="relative flex-1">
