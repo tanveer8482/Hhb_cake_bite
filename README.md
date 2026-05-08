@@ -8,7 +8,7 @@ Lightweight bakery storefront and vendor portal for a home-based baker. Customer
 - Cart with quantity controls and total calculation.
 - Delivery scheduling that starts from the next calendar day only.
 - Time-slot dropdown restricted to 10:00 AM - 10:00 PM.
-- WhatsApp checkout using a pre-filled message with customer details, items, totals, delivery time, a first image link for rich preview, and a design gallery link.
+- WhatsApp checkout using `VITE_WHATSAPP_NUMBER` and a pre-filled message with customer details, item names, quantities, totals, delivery time, and the first image link for rich preview.
 - Simple vendor portal for categories, products, prices, images, and show/hide status.
 - Clickable admin dashboard metrics that filter detail lists for total products, live items, and categories.
 - Local browser storage for MVP/demo data.
@@ -26,7 +26,7 @@ Open the URL printed by Vite, usually `http://localhost:5173`.
 
 - Admin screen: `http://localhost:5173/#admin`
 - Demo PIN: `1234`
-- Change the vendor WhatsApp number from the admin settings before taking real orders.
+- Set `VITE_WHATSAPP_NUMBER` in the storefront environment before taking real orders. Use international format with digits only, for example `923001234567`.
 
 ## WhatsApp Image Note
 

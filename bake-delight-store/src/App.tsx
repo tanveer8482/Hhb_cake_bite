@@ -7,13 +7,18 @@ import {
   MessageCircle, 
   X,
   Plus,
-  Minus
+  Minus,
+  CheckCircle2
 } from 'lucide-react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import type { DocumentData, FirestoreError, QuerySnapshot } from 'firebase/firestore';
 import { db } from '@hhb/shared';
 import type { Product, CartItem, CheckoutForm } from '@hhb/shared';
 
 const CATEGORIES = ['All', 'Cake', 'Cookie', 'Pastry', 'Cupcake'];
+const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER?.replace(/\D/g, '') ?? '';
+
+const formatPrice = (price: number) => `Rs. ${price.toLocaleString('en-PK')}`;
 
 export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -22,7 +27,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [isAddSuccessOpen, setIsAddSuccessOpen] = useState(false);
   const [checkoutForm, setCheckoutForm] = useState<CheckoutForm>({
     customerName: '',
     customerPhone: '',
@@ -38,8 +43,8 @@ export default function App() {
       where('status', '==', true)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot: any) => {
-      const prods = snapshot.docs.map((doc: any) => ({
+    const unsubscribe = onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
+      const prods = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data()
       })) as Product[];
@@ -50,7 +55,7 @@ export default function App() {
       });
       setProductsError('');
       setProducts(prods);
-    }, (error) => {
+    }, (error: FirestoreError) => {
       console.error('Failed to load products:', error);
       setProductsError('Products load nahi ho sake. Firebase permissions ya deployment config check karein.');
     });
@@ -79,6 +84,7 @@ export default function App() {
       }
       return [...prev, { productId: product.id, quantity: 1, product }];
     });
+    setIsAddSuccessOpen(true);
   };
 
   const updateQuantity = (productId: string, delta: number) => {
@@ -91,22 +97,20 @@ export default function App() {
     }).filter(item => item.quantity > 0));
   };
 
+  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const totalPrice = cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
 
-  const generateWhatsAppLink = () => {
-    const { customerName, deliveryDate, deliveryTime, address } = checkoutForm;
-    if (!customerName || !deliveryDate || !deliveryTime) {
-      alert('Please fill in all required fields');
-      return;
-    }
+  const buildWhatsAppMessage = () => {
+    const { customerName, customerPhone, deliveryDate, deliveryTime, address } = checkoutForm;
+    const firstItemImage = cart[0]?.product.imageUrl;
 
-    // Message Format: Image URL first for rich preview
-    const firstItemImage = cart[0]?.product.imageUrl || '';
-    
-    let message = `${firstItemImage}\n\n`;
+    let message = firstItemImage ? `${firstItemImage}\n\n` : '';
     message += `*New Order from HHB Cake Bites*\n`;
     message += `--------------------------\n`;
     message += `*Customer:* ${customerName}\n`;
+    if (customerPhone) {
+      message += `*Customer WhatsApp:* ${customerPhone}\n`;
+    }
     message += `*Delivery Date:* ${deliveryDate}\n`;
     message += `*Delivery Time:* ${deliveryTime}\n`;
     message += `*Address:* ${address || 'Self Pickup'}\n\n`;
@@ -117,100 +121,41 @@ export default function App() {
       message += `   - Size: ${item.product.size || 'Standard'}\n`;
       message += `   - Flavor: ${item.product.flavor || 'Original'}\n`;
       message += `   - Qty: x${item.quantity}\n`;
-      message += `   - Price: Rs. ${item.product.price * item.quantity}\n`;
+      message += `   - Price: ${formatPrice(item.product.price * item.quantity)}\n`;
     });
     
-    message += `\n*Total Amount: Rs. ${totalPrice}*`;
-
-
-    const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/923001234567?text=${encodedMessage}`, '_blank');
+    message += `\n*Total Amount: ${formatPrice(totalPrice)}*`;
+    return message;
   };
 
-  const sendWhatsAppNotification = async () => {
-    const { customerName, deliveryDate, deliveryTime, address } = checkoutForm;
-    
-    // Construct Order Summary for Body
-    let summary = `*New Order from HHB Cake Bites*\n`;
-    summary += `--------------------------\n`;
-    summary += `*Customer:* ${customerName}\n`;
-    summary += `*Delivery:* ${deliveryDate} at ${deliveryTime}\n`;
-    summary += `*Address:* ${address || 'Self Pickup'}\n\n`;
-    summary += `*Items:*\n`;
-    
-    cart.forEach((item, index) => {
-      summary += `${index + 1}. ${item.product.name} (x${item.quantity}) - Rs. ${item.product.price * item.quantity}\n`;
-    });
-    
-    summary += `\n*Total: Rs. ${totalPrice}*`;
-
-    const firstItemImage = cart[0]?.product.imageUrl || '';
-    
-    const accessToken = import.meta.env.VITE_WHATSAPP_ACCESS_TOKEN;
-    const phoneNumberId = import.meta.env.VITE_WHATSAPP_PHONE_NUMBER_ID;
-    const recipientNumber = import.meta.env.VITE_WHATSAPP_RECIPIENT_NUMBER;
-
-    if (!accessToken || !phoneNumberId || !recipientNumber) {
-      console.error('WhatsApp credentials missing');
-      return false;
+  const generateWhatsAppLink = () => {
+    if (!whatsappNumber) {
+      console.error('VITE_WHATSAPP_NUMBER is missing. Add the bakery WhatsApp number in international format without spaces.');
+      alert('WhatsApp checkout is not configured yet. Please contact the bakery directly.');
+      return;
     }
 
-    try {
-      const response = await fetch(`https://graph.facebook.com/v20.0/${phoneNumberId}/messages`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messaging_product: "whatsapp",
-          recipient_type: "individual",
-          to: recipientNumber,
-          type: "image",
-          image: {
-            link: firstItemImage,
-            caption: summary
-          }
-        }),
-      });
-
-      const data = await response.json();
-      if (response.ok) {
-        console.log('WhatsApp notification sent:', data);
-        return true;
-      } else {
-        console.error('WhatsApp API error:', data);
-        return false;
-      }
-    } catch (error) {
-      console.error('Failed to send WhatsApp notification:', error);
-      return false;
-    }
+    const encodedMessage = encodeURIComponent(buildWhatsAppMessage());
+    window.open(`https://wa.me/${whatsappNumber}?text=${encodedMessage}`, '_blank', 'noopener,noreferrer');
   };
 
-  const handleCheckout = async () => {
+  const handleCheckout = () => {
     const { customerName, deliveryDate, deliveryTime } = checkoutForm;
+    if (cart.length === 0) {
+      alert('Your box is empty');
+      return;
+    }
     if (!customerName || !deliveryDate || !deliveryTime) {
       alert('Please fill in all required fields');
       return;
     }
 
-    setIsCheckingOut(true);
-    
-    // 1. Try Automated Notification
-    const success = await sendWhatsAppNotification();
-    
-    if (success) {
-      alert('Order Confirmed! You will receive a WhatsApp notification shortly.');
-      setCart([]);
-      setIsCartOpen(false);
-    } else {
-      // 2. Fallback to manual WhatsApp link if automated fails
-      alert('Automated notification failed. Opening manual WhatsApp link...');
-      generateWhatsAppLink();
-    }
-    
-    setIsCheckingOut(false);
+    generateWhatsAppLink();
+  };
+
+  const proceedToCheckout = () => {
+    setIsAddSuccessOpen(false);
+    setIsCartOpen(true);
   };
 
   // Scheduling Logic
@@ -268,9 +213,9 @@ export default function App() {
               className="relative p-2 text-gray-600 hover:text-pink-600 transition-colors"
             >
               <ShoppingBag className="w-6 h-6" />
-              {cart.length > 0 && (
+              {totalItems > 0 && (
                 <span className="absolute top-0 right-0 bg-pink-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                  {cart.length}
+                  {totalItems}
                 </span>
               )}
             </button>
@@ -336,7 +281,7 @@ export default function App() {
                 />
                 <div className="absolute top-4 right-4">
                   <span className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-bold text-pink-600">
-                    Rs. {product.price}
+                    {formatPrice(product.price)}
                   </span>
                 </div>
               </div>
@@ -357,6 +302,82 @@ export default function App() {
           ))}
         </div>
       </main>
+
+      {/* Add-to-box Success Drawer */}
+      {isAddSuccessOpen && (
+        <div className="fixed inset-0 z-[90] flex items-end justify-center sm:items-center px-3 py-3 sm:p-6">
+          <div className="absolute inset-0 bg-gray-950/35 backdrop-blur-sm" onClick={() => setIsAddSuccessOpen(false)} />
+          <div className="relative w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-pink-100 sm:rounded-[2rem]">
+            <div className="bg-gradient-to-r from-pink-50 via-white to-rose-50 p-5 sm:p-6">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-pink-600 text-white shadow-lg shadow-pink-100">
+                    <CheckCircle2 className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-extrabold text-gray-900">Item added to your box!</h3>
+                    <p className="mt-1 text-sm text-gray-600">
+                      {totalItems} {totalItems === 1 ? 'item' : 'items'} ready for your HHB Cake Bites order.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAddSuccessOpen(false)}
+                  className="rounded-full p-2 text-gray-500 transition hover:bg-white hover:text-pink-600"
+                  aria-label="Close add to box summary"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="max-h-[45vh] overflow-y-auto px-5 py-4 sm:px-6">
+              <div className="space-y-3">
+                {cart.map(item => (
+                  <div key={item.productId} className="flex items-center gap-3 rounded-2xl border border-pink-100 bg-pink-50/40 p-3">
+                    <img
+                      src={item.product.imageUrl}
+                      alt={item.product.name}
+                      className="h-14 w-14 shrink-0 rounded-xl object-cover"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <h4 className="truncate text-sm font-bold text-gray-900">{item.product.name}</h4>
+                      <p className="text-xs font-medium text-gray-500">Qty {item.quantity}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-extrabold text-pink-600">{formatPrice(item.product.price * item.quantity)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t border-pink-100 bg-white p-5 sm:p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <span className="text-sm font-semibold text-gray-600">Box total</span>
+                <span className="text-2xl font-extrabold text-gray-900">{formatPrice(totalPrice)}</span>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddSuccessOpen(false)}
+                  className="rounded-2xl border border-pink-200 px-4 py-3 font-bold text-pink-700 transition hover:bg-pink-50"
+                >
+                  Add More Items
+                </button>
+                <button
+                  type="button"
+                  onClick={proceedToCheckout}
+                  className="rounded-2xl bg-pink-600 px-4 py-3 font-bold text-white shadow-lg shadow-pink-100 transition hover:bg-pink-700"
+                >
+                  Proceed to Checkout
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Cart Drawer */}
       {isCartOpen && (
@@ -384,7 +405,7 @@ export default function App() {
                         <img src={item.product.imageUrl} className="w-20 h-20 rounded-2xl object-cover" />
                         <div className="flex-1">
                           <h4 className="font-bold text-gray-900">{item.product.name}</h4>
-                          <p className="text-pink-600 font-medium">Rs. {item.product.price}</p>
+                          <p className="text-pink-600 font-medium">{formatPrice(item.product.price)}</p>
                           <div className="flex items-center gap-3 mt-2">
                             <button 
                               onClick={() => updateQuantity(item.productId, -1)}
@@ -468,20 +489,13 @@ export default function App() {
               <div className="p-6 border-t bg-gray-50">
                 <div className="flex justify-between items-center mb-4">
                   <span className="text-gray-600 font-medium">Total Price</span>
-                  <span className="text-2xl font-bold text-gray-900">Rs. {totalPrice}</span>
+                  <span className="text-2xl font-bold text-gray-900">{formatPrice(totalPrice)}</span>
                 </div>
                 <button 
                   onClick={handleCheckout}
-                  disabled={isCheckingOut}
-                  className="w-full py-4 bg-green-600 text-white font-bold rounded-2xl hover:bg-green-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-4 bg-green-600 text-white font-bold rounded-2xl hover:bg-green-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-100"
                 >
-                  {isCheckingOut ? (
-                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <MessageCircle className="w-5 h-5" /> Confirm & Order via WhatsApp
-                    </>
-                  )}
+                  <MessageCircle className="w-5 h-5" /> Confirm & Order via WhatsApp
                 </button>
               </div>
             )}
