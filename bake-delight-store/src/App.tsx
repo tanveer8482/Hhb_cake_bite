@@ -17,8 +17,19 @@ import type { Product, CartItem, CheckoutForm } from '@hhb/shared';
 
 const CATEGORIES = ['All', 'Cake', 'Cookie', 'Pastry', 'Cupcake'];
 const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER?.replace(/\D/g, '') ?? '';
+const whatsappAccessToken = import.meta.env.VITE_WHATSAPP_ACCESS_TOKEN ?? '';
+const whatsappPhoneNumberId = import.meta.env.VITE_WHATSAPP_PHONE_NUMBER_ID ?? '';
+const whatsappApiVersion = import.meta.env.VITE_WHATSAPP_API_VERSION ?? 'v20.0';
 
 const formatPrice = (price: number) => `Rs. ${price.toLocaleString('en-PK')}`;
+const isWhatsAppCloudConfigured = Boolean(whatsappAccessToken && whatsappPhoneNumberId);
+
+const sanitizePakistanWhatsAppNumber = (phoneNumber: string) => {
+  const digitsWithoutLeadingZero = phoneNumber.replace(/\D/g, '').replace(/^0+/, '');
+  return digitsWithoutLeadingZero.startsWith('92')
+    ? digitsWithoutLeadingZero
+    : `92${digitsWithoutLeadingZero}`;
+};
 
 export default function App() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -141,8 +152,58 @@ export default function App() {
     return true;
   };
 
-  const handleCheckout = () => {
-    const { customerName, deliveryDate, deliveryTime } = checkoutForm;
+  const sendWhatsAppCloudMessage = async () => {
+    const sanitizedCustomerPhone = sanitizePakistanWhatsAppNumber(checkoutForm.customerPhone);
+
+    if (!/^92\d+$/.test(sanitizedCustomerPhone)) {
+      alert('Please enter a valid Pakistani WhatsApp number');
+      return false;
+    }
+
+    const payload = {
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to: sanitizedCustomerPhone,
+      type: 'text',
+      text: {
+        preview_url: false,
+        body: buildWhatsAppMessage(),
+      },
+    };
+
+    try {
+      const response = await fetch(`https://graph.facebook.com/${whatsappApiVersion}/${whatsappPhoneNumberId}/messages`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${whatsappAccessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+
+      console.log('WhatsApp Cloud API response:', {
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText,
+        data,
+      });
+
+      if (!response.ok) {
+        alert('WhatsApp message failed. Please check the browser console for the exact API error.');
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.log('WhatsApp Cloud API response:', error);
+      alert('WhatsApp message failed. Please check the browser console for the exact API error.');
+      return false;
+    }
+  };
+
+  const handleCheckout = async () => {
+    const { customerName, customerPhone, deliveryDate, deliveryTime } = checkoutForm;
     if (cart.length === 0) {
       alert('Your box is empty');
       return;
@@ -151,9 +212,16 @@ export default function App() {
       alert('Please fill in all required fields');
       return;
     }
+    if (isWhatsAppCloudConfigured && !customerPhone) {
+      alert('Please enter your WhatsApp number');
+      return;
+    }
 
-    const didOpenWhatsApp = generateWhatsAppLink();
-    if (!didOpenWhatsApp) {
+    const didTriggerWhatsApp = isWhatsAppCloudConfigured
+      ? await sendWhatsAppCloudMessage()
+      : generateWhatsAppLink();
+
+    if (!didTriggerWhatsApp) {
       return;
     }
 
