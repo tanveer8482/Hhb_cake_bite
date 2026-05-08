@@ -170,7 +170,7 @@ export default function App() {
       let data;
       try {
         data = JSON.parse(rawText);
-      } catch (parseError) {
+      } catch {
         data = rawText;
       }
 
