@@ -17,12 +17,8 @@ import type { Product, CartItem, CheckoutForm } from '@hhb/shared';
 
 const CATEGORIES = ['All', 'Cake', 'Cookie', 'Pastry', 'Cupcake'];
 const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER?.replace(/\D/g, '') ?? '';
-const whatsappAccessToken = import.meta.env.VITE_WHATSAPP_ACCESS_TOKEN ?? '';
-const whatsappPhoneNumberId = import.meta.env.VITE_WHATSAPP_PHONE_NUMBER_ID ?? '';
-const whatsappApiVersion = import.meta.env.VITE_WHATSAPP_API_VERSION ?? 'v20.0';
 
 const formatPrice = (price: number) => `Rs. ${price.toLocaleString('en-PK')}`;
-const isWhatsAppCloudConfigured = Boolean(whatsappAccessToken && whatsappPhoneNumberId);
 
 const sanitizePakistanWhatsAppNumber = (phoneNumber: string) => {
   const digitsWithoutLeadingZero = phoneNumber.replace(/\D/g, '').replace(/^0+/, '');
@@ -152,7 +148,7 @@ export default function App() {
     return true;
   };
 
-  const sendWhatsAppCloudMessage = async () => {
+  const sendWhatsAppServerMessage = async () => {
     const sanitizedCustomerPhone = sanitizePakistanWhatsAppNumber(checkoutForm.customerPhone);
 
     if (!/^92\d+$/.test(sanitizedCustomerPhone)) {
@@ -160,29 +156,20 @@ export default function App() {
       return false;
     }
 
-    const payload = {
-      messaging_product: 'whatsapp',
-      recipient_type: 'individual',
-      to: sanitizedCustomerPhone,
-      type: 'text',
-      text: {
-        preview_url: false,
-        body: buildWhatsAppMessage(),
-      },
-    };
-
     try {
-      const response = await fetch(`https://graph.facebook.com/${whatsappApiVersion}/${whatsappPhoneNumberId}/messages`, {
+      const response = await fetch('/api/send-whatsapp', {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${whatsappAccessToken}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          to: sanitizedCustomerPhone,
+          message: buildWhatsAppMessage(),
+        }),
       });
       const data = await response.json();
 
-      console.log('WhatsApp Cloud API response:', {
+      console.log('WhatsApp send endpoint response:', {
         ok: response.ok,
         status: response.status,
         statusText: response.statusText,
@@ -190,14 +177,12 @@ export default function App() {
       });
 
       if (!response.ok) {
-        alert('WhatsApp message failed. Please check the browser console for the exact API error.');
         return false;
       }
 
       return true;
     } catch (error) {
-      console.log('WhatsApp Cloud API response:', error);
-      alert('WhatsApp message failed. Please check the browser console for the exact API error.');
+      console.log('WhatsApp send endpoint response:', error);
       return false;
     }
   };
@@ -212,16 +197,16 @@ export default function App() {
       alert('Please fill in all required fields');
       return;
     }
-    if (isWhatsAppCloudConfigured && !customerPhone) {
+    if (!customerPhone) {
       alert('Please enter your WhatsApp number');
       return;
     }
 
-    const didTriggerWhatsApp = isWhatsAppCloudConfigured
-      ? await sendWhatsAppCloudMessage()
-      : generateWhatsAppLink();
+    const didTriggerWhatsApp = await sendWhatsAppServerMessage()
+      || generateWhatsAppLink();
 
     if (!didTriggerWhatsApp) {
+      alert('WhatsApp checkout is not available. Please check the browser console for details.');
       return;
     }
 

@@ -27,6 +27,7 @@ Open the URL printed by Vite, usually `http://localhost:5173`.
 - Admin screen: `http://localhost:5173/#admin`
 - Demo PIN: `1234`
 - Set `VITE_WHATSAPP_NUMBER` in the storefront environment before taking real orders. Use international format with digits only, for example `923001234567`.
+- For WhatsApp Cloud API delivery, set backend-only Vercel env vars `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, and optionally `WHATSAPP_API_VERSION`. Do not expose the access token with a `VITE_` prefix.
 
 ## WhatsApp Image Note
 
