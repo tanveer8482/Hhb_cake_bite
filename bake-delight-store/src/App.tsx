@@ -476,6 +476,7 @@ export default function App() {
             </div>
           ))}
         </div>
+        </div>
       </main>
 
       {/* Add-to-box Success Drawer */}
