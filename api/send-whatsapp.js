@@ -98,20 +98,32 @@ module.exports = async function handler(req, res) {
       data,
     });
 
-    return res.status(response.ok ? response.status : 502).json({
-      ok: response.ok,
-      status: response.status,
-      statusText: response.statusText,
-      data,
-      error: response.ok ? undefined : 'WhatsApp Cloud API returned an error',
-    });
+    if (response.ok) {
+      console.log('✅ WhatsApp message sent successfully to', sanitizedPhone);
+      return res.status(200).json({
+        success: true,
+        message: 'WhatsApp message sent successfully',
+        data,
+      });
+    } else {
+      console.error('❌ WhatsApp Cloud API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        data,
+      });
+      return res.status(502).json({
+        success: false,
+        error: 'WhatsApp Cloud API returned an error',
+        details: data,
+      });
+    }
   } catch (error) {
-    console.log('WhatsApp Cloud API request failed:', {
+    console.error('❌ WhatsApp Cloud API request failed:', {
       message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     });
     return res.status(500).json({
-      ok: false,
+      success: false,
       error: 'Failed to send WhatsApp message',
       details: error instanceof Error ? error.message : String(error),
     });
