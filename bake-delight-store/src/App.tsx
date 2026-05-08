@@ -146,13 +146,6 @@ export default function App() {
     return message;
   };
 
-  const generateWhatsAppLink = () => {
-    console.log('📱 Falling back to wa.me link for manual WhatsApp message');
-    const encodedMessage = encodeURIComponent(buildWhatsAppMessage());
-    window.open(`https://wa.me/${BAKERY_WHATSAPP_NUMBER}?text=${encodedMessage}`, '_blank', 'noopener,noreferrer');
-    return true;
-  };
-
   const sendWhatsAppServerMessage = async () => {
     const cleanedCustomerPhone = String(checkoutForm.customerPhone).replace(/\D/g, '');
     const sanitizedCustomerPhone = sanitizePakistanWhatsAppNumber(cleanedCustomerPhone);
@@ -187,12 +180,12 @@ export default function App() {
         console.log('✅ WhatsApp message sent successfully via Cloud API');
         return true;
       } else {
-        console.error('❌ WhatsApp Cloud API failed, falling back to wa.me link:', data);
-        return false; // Will trigger fallback to wa.me
+        console.error('❌ WhatsApp Cloud API failed:', data);
+        return false;
       }
     } catch (error) {
-      console.error('❌ WhatsApp Cloud API request failed, falling back to wa.me link:', error);
-      return false; // Will trigger fallback to wa.me
+      console.error('❌ WhatsApp Cloud API request failed:', error);
+      return false;
     }
   };
 
@@ -212,12 +205,11 @@ export default function App() {
     }
 
     console.log('🛒 Starting checkout process...');
-    const didTriggerWhatsApp = await sendWhatsAppServerMessage()
-      || generateWhatsAppLink();
+    const didSendMessage = await sendWhatsAppServerMessage();
 
-    if (!didTriggerWhatsApp) {
-      console.error('❌ All WhatsApp methods failed');
-      alert('WhatsApp checkout is not available. Please check the browser console for details.');
+    if (!didSendMessage) {
+      console.error('❌ WhatsApp Cloud API failed');
+      alert('Failed to send WhatsApp message. Please try again or contact support.');
       return;
     }
 
