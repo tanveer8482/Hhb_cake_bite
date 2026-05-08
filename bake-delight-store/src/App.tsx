@@ -138,11 +138,12 @@ export default function App() {
 
   const generateWhatsAppLink = () => {
     if (!whatsappNumber) {
-      console.error('VITE_WHATSAPP_NUMBER is missing. Add the bakery WhatsApp number in international format without spaces.');
+      console.error('❌ VITE_WHATSAPP_NUMBER is missing. Add the bakery WhatsApp number in international format without spaces.');
       alert('WhatsApp checkout is not configured yet. Please contact the bakery directly.');
       return false;
     }
 
+    console.log('📱 Falling back to wa.me link for manual WhatsApp message');
     const encodedMessage = encodeURIComponent(buildWhatsAppMessage());
     window.open(`https://wa.me/${whatsappNumber}?text=${encodedMessage}`, '_blank', 'noopener,noreferrer');
     return true;
@@ -157,6 +158,7 @@ export default function App() {
     }
 
     try {
+      console.log('📱 Attempting to send WhatsApp message via Cloud API...');
       const response = await fetch('/api/send-whatsapp', {
         method: 'POST',
         headers: {
@@ -176,14 +178,16 @@ export default function App() {
         data,
       });
 
-      if (!response.ok) {
-        return false;
+      if (response.ok && data.success) {
+        console.log('✅ WhatsApp message sent successfully via Cloud API');
+        return true;
+      } else {
+        console.error('❌ WhatsApp Cloud API failed, falling back to wa.me link:', data);
+        return false; // Will trigger fallback to wa.me
       }
-
-      return true;
     } catch (error) {
-      console.log('WhatsApp send endpoint response:', error);
-      return false;
+      console.error('❌ WhatsApp Cloud API request failed, falling back to wa.me link:', error);
+      return false; // Will trigger fallback to wa.me
     }
   };
 
@@ -202,14 +206,17 @@ export default function App() {
       return;
     }
 
+    console.log('🛒 Starting checkout process...');
     const didTriggerWhatsApp = await sendWhatsAppServerMessage()
       || generateWhatsAppLink();
 
     if (!didTriggerWhatsApp) {
+      console.error('❌ All WhatsApp methods failed');
       alert('WhatsApp checkout is not available. Please check the browser console for details.');
       return;
     }
 
+    console.log('✅ Order submitted successfully');
     setIsCartOpen(false);
     setIsAddSuccessOpen(false);
     setIsOrderSuccessOpen(true);
