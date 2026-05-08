@@ -15,38 +15,28 @@ const sanitizePakistanWhatsAppNumber = (phoneNumber = '') => {
   return digits;
 };
 
-module.exports = async function handler(req, res) {
-  console.log('send-whatsapp handler invoked:', req.method);
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.setHeader('Vary', 'Origin');
-  res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
-  res.setHeader('Access-Control-Max-Age', '86400');
-  res.setHeader('Allow', 'POST,OPTIONS');
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Content-Type', 'application/json');
 
   if (req.method === 'OPTIONS') {
-    return res.status(204).end();
+    return res.status(200).json({ message: 'OK' });
   }
 
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ message: 'Only POST allowed' });
   }
 
   const accessToken = String(process.env.WHATSAPP_ACCESS_TOKEN || '').trim();
   const phoneNumberId = String(process.env.WHATSAPP_PHONE_NUMBER_ID || '').trim();
   const apiVersion = String(process.env.WHATSAPP_API_VERSION || 'v20.0').trim();
 
-  console.log('WhatsApp send config:', {
-    accessTokenPresent: Boolean(accessToken),
-    phoneNumberId: phoneNumberId ? `***${phoneNumberId.slice(-4)}` : null,
-    apiVersion,
-  });
-
   if (!accessToken || !phoneNumberId) {
     return res.status(500).json({
-      error: 'WhatsApp Cloud API is not configured',
+      success: false,
+      message: 'WhatsApp Cloud API is not configured',
       details: 'Set WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID in Vercel environment variables.',
     });
   }
@@ -56,13 +46,17 @@ module.exports = async function handler(req, res) {
 
   if (!/^923\d{9}$/.test(sanitizedPhone)) {
     return res.status(400).json({
-      error: 'Invalid WhatsApp number',
+      success: false,
+      message: 'Invalid WhatsApp number',
       details: 'Phone number must be a valid Pakistani WhatsApp number in the 923xxxxxxxxx format.',
     });
   }
 
   if (!message || typeof message !== 'string') {
-    return res.status(400).json({ error: 'Message body is required' });
+    return res.status(400).json({
+      success: false,
+      message: 'Message body is required',
+    });
   }
 
   const payload = {
@@ -76,24 +70,6 @@ module.exports = async function handler(req, res) {
     },
   };
 
-  console.log('WhatsApp Cloud API request payload:', {
-    apiVersion,
-    phoneNumberId: `***${phoneNumberId.slice(-4)}`,
-    to: sanitizedPhone,
-    payload,
-  });
-
-  const parseJsonBody = async response => {
-    try {
-      return await response.json();
-    } catch (parseError) {
-      return {
-        parseError: parseError instanceof Error ? parseError.message : String(parseError),
-        rawText: await response.text(),
-      };
-    }
-  };
-
   try {
     const response = await fetch(`https://graph.facebook.com/${apiVersion}/${phoneNumberId}/messages`, {
       method: 'POST',
@@ -104,42 +80,25 @@ module.exports = async function handler(req, res) {
       body: JSON.stringify(payload),
     });
 
-    const data = await parseJsonBody(response);
-
-    console.log('WhatsApp Cloud API response:', {
-      ok: response.ok,
-      status: response.status,
-      statusText: response.statusText,
-      data,
-    });
+    const data = await response.json().catch(async () => ({ rawText: await response.text() }));
 
     if (response.ok) {
-      console.log('✅ WhatsApp message sent successfully to', sanitizedPhone);
       return res.status(200).json({
         success: true,
         message: 'WhatsApp message sent successfully',
         data,
       });
-    } else {
-      console.error('❌ WhatsApp Cloud API error:', {
-        status: response.status,
-        statusText: response.statusText,
-        data,
-      });
-      return res.status(502).json({
-        success: false,
-        error: 'WhatsApp Cloud API returned an error',
-        details: data,
-      });
     }
-  } catch (error) {
-    console.error('❌ WhatsApp Cloud API request failed:', {
-      message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
+
+    return res.status(502).json({
+      success: false,
+      message: 'WhatsApp Cloud API returned an error',
+      details: data,
     });
+  } catch (error) {
     return res.status(500).json({
       success: false,
-      error: 'Failed to send WhatsApp message',
+      message: 'Failed to send WhatsApp message',
       details: error instanceof Error ? error.message : String(error),
     });
   }

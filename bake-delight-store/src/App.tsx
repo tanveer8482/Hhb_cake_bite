@@ -158,11 +158,8 @@ export default function App() {
       console.log('📱 Attempting to send WhatsApp message via Cloud API...');
       const response = await fetch('/api/send-whatsapp', {
         method: 'POST',
-        mode: 'cors',
-        credentials: 'same-origin',
         headers: {
           'Content-Type': 'application/json',
-          Accept: 'application/json',
         },
         body: JSON.stringify({
           to: sanitizedCustomerPhone,
