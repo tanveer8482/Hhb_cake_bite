@@ -166,7 +166,12 @@ export default function App() {
           message: buildWhatsAppMessage(),
         }),
       });
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        data = await response.text();
+      }
 
       console.log('WhatsApp send endpoint response:', {
         ok: response.ok,
@@ -175,7 +180,7 @@ export default function App() {
         data,
       });
 
-      if (response.ok && data.success) {
+      if (response.ok && data && typeof data === 'object' && data.success) {
         console.log('✅ WhatsApp message sent successfully via Cloud API');
         return true;
       } else {
