@@ -42,3 +42,7 @@ npm run build
 ```
 
 The production files are generated in `dist/`.
+
+## Deployment Notes
+
+- Use the latest `main` branch commit for Vercel production deployments.
