@@ -39,10 +39,10 @@ module.exports = async function handler(req, res) {
   const { to, message } = req.body || {};
   const sanitizedPhone = sanitizePakistanWhatsAppNumber(to);
 
-  if (!/^92\d+$/.test(sanitizedPhone)) {
+  if (!/^923\d{9}$/.test(sanitizedPhone)) {
     return res.status(400).json({
       error: 'Invalid WhatsApp number',
-      details: 'Phone number must resolve to digits only and start with 92.',
+      details: 'Phone number must be a valid Pakistani WhatsApp number in the 923xxxxxxxxx format.',
     });
   }
 
