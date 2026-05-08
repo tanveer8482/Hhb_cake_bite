@@ -16,7 +16,7 @@ import { db } from '@hhb/shared';
 import type { Product, CartItem, CheckoutForm } from '@hhb/shared';
 
 const CATEGORIES = ['All', 'Cake', 'Cookie', 'Pastry', 'Cupcake'];
-const BAKERY_WHATSAPP_NUMBER = '923001234567'; // Replace with the bakery's WhatsApp number in 923xxxxxxxxx format.
+const BAKERY_WHATSAPP_NUMBER = '923008156061'; // Bakery WhatsApp number in 923xxxxxxxxx format.
 
 const formatPrice = (price: number) => `Rs. ${price.toLocaleString('en-PK')}`;
 
@@ -144,10 +144,11 @@ export default function App() {
   };
 
   const sendWhatsAppServerMessage = async () => {
-    const sanitizedCustomerPhone = sanitizePakistanWhatsAppNumber(checkoutForm.customerPhone);
+    const cleanedCustomerPhone = String(checkoutForm.customerPhone).replace(/\D/g, '');
+    const sanitizedCustomerPhone = sanitizePakistanWhatsAppNumber(cleanedCustomerPhone);
 
-    if (!/^92\d+$/.test(sanitizedCustomerPhone)) {
-      alert('Please enter a valid Pakistani WhatsApp number');
+    if (!/^92\d{9}$/.test(sanitizedCustomerPhone)) {
+      alert('Please enter a valid Pakistani WhatsApp number in the 923xxxxxxxxx format');
       return false;
     }
 
