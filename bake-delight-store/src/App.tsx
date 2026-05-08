@@ -16,7 +16,7 @@ import { db } from '@hhb/shared';
 import type { Product, CartItem, CheckoutForm } from '@hhb/shared';
 
 const CATEGORIES = ['All', 'Cake', 'Cookie', 'Pastry', 'Cupcake'];
-const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER?.replace(/\D/g, '') ?? '';
+const BAKERY_WHATSAPP_NUMBER = '923001234567'; // Replace with the bakery's WhatsApp number in 923xxxxxxxxx format.
 
 const formatPrice = (price: number) => `Rs. ${price.toLocaleString('en-PK')}`;
 
@@ -137,15 +137,9 @@ export default function App() {
   };
 
   const generateWhatsAppLink = () => {
-    if (!whatsappNumber) {
-      console.error('❌ VITE_WHATSAPP_NUMBER is missing. Add the bakery WhatsApp number in international format without spaces.');
-      alert('WhatsApp checkout is not configured yet. Please contact the bakery directly.');
-      return false;
-    }
-
     console.log('📱 Falling back to wa.me link for manual WhatsApp message');
     const encodedMessage = encodeURIComponent(buildWhatsAppMessage());
-    window.open(`https://wa.me/${whatsappNumber}?text=${encodedMessage}`, '_blank', 'noopener,noreferrer');
+    window.open(`https://wa.me/${BAKERY_WHATSAPP_NUMBER}?text=${encodedMessage}`, '_blank', 'noopener,noreferrer');
     return true;
   };
 
