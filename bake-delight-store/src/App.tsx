@@ -158,25 +158,30 @@ export default function App() {
       console.log('📱 Attempting to send WhatsApp message via Cloud API...');
       const response = await fetch('/api/send-whatsapp', {
         method: 'POST',
+        mode: 'cors',
+        credentials: 'same-origin',
         headers: {
           'Content-Type': 'application/json',
+          Accept: 'application/json',
         },
         body: JSON.stringify({
           to: sanitizedCustomerPhone,
           message: buildWhatsAppMessage(),
         }),
       });
+      const rawText = await response.text();
       let data;
       try {
-        data = await response.json();
+        data = JSON.parse(rawText);
       } catch (parseError) {
-        data = await response.text();
+        data = rawText;
       }
 
       console.log('WhatsApp send endpoint response:', {
         ok: response.ok,
         status: response.status,
         statusText: response.statusText,
+        rawText,
         data,
       });
 

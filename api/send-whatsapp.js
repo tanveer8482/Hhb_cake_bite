@@ -16,15 +16,18 @@ const sanitizePakistanWhatsAppNumber = (phoneNumber = '') => {
 };
 
 module.exports = async function handler(req, res) {
+  console.log('send-whatsapp handler invoked:', req.method);
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
+  res.setHeader('Access-Control-Max-Age', '86400');
   res.setHeader('Allow', 'POST,OPTIONS');
   res.setHeader('Content-Type', 'application/json');
 
   if (req.method === 'OPTIONS') {
-    return res.status(200).json({ ok: true });
+    return res.status(204).end();
   }
 
   if (req.method !== 'POST') {
