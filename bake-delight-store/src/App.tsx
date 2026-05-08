@@ -28,6 +28,7 @@ export default function App() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAddSuccessOpen, setIsAddSuccessOpen] = useState(false);
+  const [isOrderSuccessOpen, setIsOrderSuccessOpen] = useState(false);
   const [checkoutForm, setCheckoutForm] = useState<CheckoutForm>({
     customerName: '',
     customerPhone: '',
@@ -132,11 +133,12 @@ export default function App() {
     if (!whatsappNumber) {
       console.error('VITE_WHATSAPP_NUMBER is missing. Add the bakery WhatsApp number in international format without spaces.');
       alert('WhatsApp checkout is not configured yet. Please contact the bakery directly.');
-      return;
+      return false;
     }
 
     const encodedMessage = encodeURIComponent(buildWhatsAppMessage());
     window.open(`https://wa.me/${whatsappNumber}?text=${encodedMessage}`, '_blank', 'noopener,noreferrer');
+    return true;
   };
 
   const handleCheckout = () => {
@@ -150,12 +152,24 @@ export default function App() {
       return;
     }
 
-    generateWhatsAppLink();
+    const didOpenWhatsApp = generateWhatsAppLink();
+    if (!didOpenWhatsApp) {
+      return;
+    }
+
+    setIsCartOpen(false);
+    setIsAddSuccessOpen(false);
+    setIsOrderSuccessOpen(true);
   };
 
   const proceedToCheckout = () => {
     setIsAddSuccessOpen(false);
     setIsCartOpen(true);
+  };
+
+  const handleBackToShop = () => {
+    setIsOrderSuccessOpen(false);
+    setCart([]);
   };
 
   // Scheduling Logic
@@ -374,6 +388,36 @@ export default function App() {
                   Proceed to Checkout
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Order Success Modal */}
+      {isOrderSuccessOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center px-4 py-6">
+          <div className="absolute inset-0 bg-gray-950/45 backdrop-blur-sm" />
+          <div className="relative w-full max-w-md overflow-hidden rounded-[2rem] bg-white shadow-2xl ring-1 ring-emerald-100">
+            <div className="bg-gradient-to-b from-emerald-50 via-white to-white px-6 pb-7 pt-8 text-center sm:px-8">
+              <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-600 text-white shadow-xl shadow-emerald-100 ring-8 ring-emerald-50">
+                <CheckCircle2 className="h-11 w-11" strokeWidth={2.5} />
+              </div>
+              <h3 className="text-2xl font-extrabold text-gray-900">
+                Order Placed Successfully!
+              </h3>
+              <p className="mt-4 text-sm leading-6 text-gray-600">
+                Thank you for shopping with Bake Delight. Your order has been received. Our team will contact you shortly on WhatsApp to confirm your delivery details.
+              </p>
+            </div>
+
+            <div className="border-t border-emerald-100 bg-white px-6 pb-6 sm:px-8">
+              <button
+                type="button"
+                onClick={handleBackToShop}
+                className="mt-5 w-full rounded-2xl bg-emerald-600 px-5 py-4 font-bold text-white shadow-lg shadow-emerald-100 transition hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-100"
+              >
+                Back to Shop
+              </button>
             </div>
           </div>
         </div>
