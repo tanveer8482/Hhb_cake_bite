@@ -16,7 +16,6 @@ import { db } from '@hhb/shared';
 import type { Product, CartItem, CheckoutForm } from '@hhb/shared';
 
 const CATEGORIES = ['All', 'Cake', 'Cookie', 'Pastry', 'Cupcake'];
-const BAKERY_WHATSAPP_NUMBER = '923008156061'; // Bakery WhatsApp number in 923xxxxxxxxx format.
 
 const formatPrice = (price: number) => `Rs. ${price.toLocaleString('en-PK')}`;
 
